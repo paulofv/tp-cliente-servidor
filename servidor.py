@@ -5,18 +5,7 @@ import thread
 import sys
 import os
 
-HOST = 'localhost' 		# endereco ip do servidor
-PORT = 6666 			# porta que o servidor esta
-
-if len(sys.argv) == 1:
-	print "Nenhuma pasta passada por parametro!\nEncerrando servidor...\n"
-
-if len(sys.argv) == 3:
-	PORT = int(sys.argv[2])
-
-pastaserv = sys.argv[1]
-
-def existe_arquivo(arquivo):
+def existe_arquivo(arquivo):  # Verifica se o arquivo solicitado existe
 	caminho = pastaserv + '/' + arquivo
 	return os.path.isfile(caminho)
 	
@@ -35,17 +24,30 @@ def conectado(con, cliente):
 		con.sendall(envia)
 		con.close()
 	else:
-		con.send("Erro 404 - Arquivo nao encontrado")
+		cabecalho = 'HTTP/1.0 404 Not Found\r\nExpires: -1\r\n \n'
+		envia = cabecalho + 'Arquivo nao encontrado!'
+		con.send(envia)
 		con.close()
 	print "Fechando conexao com o cliente ", cliente
 
+HOST = 'localhost' 		# Endereco do servidor
+PORT = 6666 			# Porta padrao caso nao seja especificada nos parametros
 
-tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-tcp.bind((HOST, PORT)) 	# associa o socket a uma porta e um IP
-tcp.listen(1)			# coloca o servidor escutando (modo passivo)
+if len(sys.argv) == 1:  # Verifica se o usuario passou pelo menos o parametro obrigatorio
+	print "Nenhuma pasta passada por parametro!\nEncerrando servidor...\n"
+	sys.exit()
+
+if len(sys.argv) == 3:  # Verifica se o usuario especificou a porta
+	PORT = int(sys.argv[2])
+
+pastaserv = sys.argv[1]
+
+socketserv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+socketserv.bind((HOST, PORT)) 	# associa o socket a uma porta e um IP
+socketserv.listen(1)			# coloca o servidor escutando (modo passivo)
 print("Servidor iniciado no endereço: http://%s porta: %d" %(HOST, PORT))
 
 while True:
-	con, cliente = tcp.accept() # retorna um objeto socket novo e o endereço do cliente
-	thread.start_new_thread(conectado, tuple([con, cliente]))
-tcp.close()
+	con, cliente = socketserv.accept() # retorna um objeto socket novo e o endereço do cliente
+	thread.start_new_thread(conectado, tuple([con, cliente])) # inicia a thread para retornar o arquivo solicitado pelo cliente
+socketserv.close()
